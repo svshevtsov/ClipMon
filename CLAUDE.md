@@ -59,7 +59,6 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 - **Content Analysis**: Automatic classification of URLs, emails, and text types
 - **Logging**: Unified Logging System (os_log) with structured categories
 - **Security**: App runs in sandbox mode with file read/write permissions
-- **Deduplication**: Uses SHA-256 hashing to prevent duplicate entries
 - **Configuration**: YAML file parsing with tilde expansion for paths
 
 ### App Entitlements
@@ -73,7 +72,6 @@ The app is configured with:
 CREATE TABLE clipboard_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     content TEXT NOT NULL,
-    content_hash TEXT UNIQUE,
     app_name TEXT,
     app_bundle_id TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -89,7 +87,6 @@ CREATE TABLE clipboard_entries (
 
 **Field Descriptions:**
 - `content`: The actual clipboard text content
-- `content_hash`: SHA-256 hash for deduplication
 - `app_name`: Display name of the source application
 - `app_bundle_id`: Bundle identifier of the source application
 - `timestamp`: ISO8601 formatted timestamp of when content was copied
@@ -154,8 +151,7 @@ EditorConfig is supported by:
 - Clipboard monitoring uses `NSPasteboard.changeCount` for efficient change detection
 - Rich metadata collection includes source app detection, content analysis, and language detection
 - Menu bar icon provides basic quit functionality
-- SHA-256 content hashing prevents duplicate clipboard entries from being stored
-- Uses CommonCrypto for hash generation and NaturalLanguage for language detection
+- Uses NaturalLanguage for language detection
 - Content type classification: url, email, short_text, long_text, date_containing, numeric_containing
 - Automatic word count, character count, and line count statistics
 - Supports tilde (`~`) expansion in file paths
@@ -168,7 +164,6 @@ For each clipboard entry, the following metadata is automatically collected:
 - **Content Statistics**: Character count, word count, line count
 - **Content Classification**: Automatic detection of URLs, emails, and content types
 - **Language Detection**: Uses Apple's NaturalLanguage framework for text longer than 10 characters
-- **Deduplication**: SHA-256 hash prevents storing identical content multiple times
 
 ## Logging System
 

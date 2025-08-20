@@ -23,7 +23,6 @@ extension OSLog {
 
 struct ClipboardEntry {
     let content: String
-    let contentHash: String
     let appName: String?
     let appBundleId: String?
     let timestamp: Date
@@ -84,7 +83,6 @@ class ClipboardMonitor: ObservableObject {
             CREATE TABLE IF NOT EXISTS clipboard_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 content TEXT NOT NULL,
-                content_hash TEXT UNIQUE,
                 app_name TEXT,
                 app_bundle_id TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -151,7 +149,7 @@ class ClipboardMonitor: ObservableObject {
 
         return ClipboardEntry(
             content: content,
-            contentHash: content.sha256,
+
             appName: frontmostApp?.localizedName,
             appBundleId: frontmostApp?.bundleIdentifier,
             timestamp: Date(),
@@ -216,28 +214,27 @@ class ClipboardMonitor: ObservableObject {
 
     private func saveClipboardEntry(_ entry: ClipboardEntry) {
         let insertSQL = """
-            INSERT OR IGNORE INTO clipboard_entries (
-                content, content_hash, app_name, app_bundle_id, timestamp,
+            INSERT INTO clipboard_entries (
+                content, app_name, app_bundle_id, timestamp,
                 character_count, word_count, line_count, content_type,
                 is_url, is_email, language_detected
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         var statement: OpaquePointer?
 
         if sqlite3_prepare_v2(database, insertSQL, -1, &statement, nil) == SQLITE_OK {
             sqlite3_bind_text(statement, 1, entry.content, -1, nil)
-            sqlite3_bind_text(statement, 2, entry.contentHash, -1, nil)
-            sqlite3_bind_text(statement, 3, entry.appName, -1, nil)
-            sqlite3_bind_text(statement, 4, entry.appBundleId, -1, nil)
-            sqlite3_bind_text(statement, 5, ISO8601DateFormatter().string(from: entry.timestamp), -1, nil)
-            sqlite3_bind_int(statement, 6, Int32(entry.characterCount))
-            sqlite3_bind_int(statement, 7, Int32(entry.wordCount))
-            sqlite3_bind_int(statement, 8, Int32(entry.lineCount))
-            sqlite3_bind_text(statement, 9, entry.contentType, -1, nil)
-            sqlite3_bind_int(statement, 10, entry.isURL ? 1 : 0)
-            sqlite3_bind_int(statement, 11, entry.isEmail ? 1 : 0)
-            sqlite3_bind_text(statement, 12, entry.languageDetected, -1, nil)
+            sqlite3_bind_text(statement, 2, entry.appName, -1, nil)
+            sqlite3_bind_text(statement, 3, entry.appBundleId, -1, nil)
+            sqlite3_bind_text(statement, 4, ISO8601DateFormatter().string(from: entry.timestamp), -1, nil)
+            sqlite3_bind_int(statement, 5, Int32(entry.characterCount))
+            sqlite3_bind_int(statement, 6, Int32(entry.wordCount))
+            sqlite3_bind_int(statement, 7, Int32(entry.lineCount))
+            sqlite3_bind_text(statement, 8, entry.contentType, -1, nil)
+            sqlite3_bind_int(statement, 9, entry.isURL ? 1 : 0)
+            sqlite3_bind_int(statement, 10, entry.isEmail ? 1 : 0)
+            sqlite3_bind_text(statement, 11, entry.languageDetected, -1, nil)
 
             if sqlite3_step(statement) == SQLITE_DONE {
                 os_log("Clipboard entry saved to database", log: .database, type: .info)
@@ -250,7 +247,8 @@ class ClipboardMonitor: ObservableObject {
             } else {
                 os_log("Failed to insert clipboard entry into database", log: .database, type: .error)
                 if let errorMsg = sqlite3_errmsg(database) {
-                    os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsg)
+                    let errorMsgString = String(cString: errorMsg)
+                    os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsgString)
                 }
             }
         }
@@ -259,17 +257,3 @@ class ClipboardMonitor: ObservableObject {
     }
 }
 
-extension String {
-    var sha256: String {
-        let data = Data(utf8)
-        var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-
-        data.withUnsafeBytes {
-            _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &digest)
-        }
-
-        return digest.map { String(format: "%02x", $0) }.joined()
-    }
-}
-
-import CommonCrypto
