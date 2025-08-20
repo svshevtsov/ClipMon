@@ -5,6 +5,9 @@
       "Bash(sed:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/svshevtsov/Library/Developer/Xcode/DerivedData/ClipMon-gvoiebwcaummlydhtlugcpidobuz/Build/Products/Debug"
+    ]
   }
 }

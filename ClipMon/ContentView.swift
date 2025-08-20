@@ -5,15 +5,15 @@
 //  Created by Sergey Shevtsov on 20.08.2025.
 //
 
-import Foundation
 import AppKit
-import SQLite3
+import Foundation
 import NaturalLanguage
+import SQLite3
 import os.log
 
 // MARK: - Logging Categories
 extension OSLog {
-    private static var subsystem = Bundle.main.bundleIdentifier!
+    private static var subsystem = "me.svshevtsov.ClipMon"
 
     static let clipboard = OSLog(subsystem: subsystem, category: "clipboard")
     static let database = OSLog(subsystem: subsystem, category: "database")
@@ -35,7 +35,7 @@ struct ClipboardEntry {
     let languageDetected: String?
 }
 
-class ClipboardMonitor: ObservableObject {
+class ClipboardMonitor {
     private var timer: Timer?
     private var lastChangeCount: Int = 0
     private var database: OpaquePointer?
@@ -51,6 +51,12 @@ class ClipboardMonitor: ObservableObject {
     deinit {
         stopMonitoring()
         sqlite3_close(database)
+    }
+    
+    public func stop() {
+        stopMonitoring()
+        sqlite3_close(database)
+        database = nil
     }
 
     private func setupDatabase() {

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ClipMon is a configurable macOS background application that monitors clipboard changes and stores all clipboard text entries in a local SQLite database. The app runs completely in the background without any UI, continuously monitoring the system clipboard for text changes and automatically saving them with timestamps. Configuration is handled via YAML files with sensible defaults.
+ClipMon is a configurable macOS command-line tool that monitors clipboard changes and stores all clipboard text entries in a local SQLite database. The tool runs as a background process, continuously monitoring the system clipboard for text changes and automatically saving them with timestamps and rich metadata. Configuration is handled via YAML files with sensible defaults, and the tool includes command-line options for help, version info, and custom configuration.
 
 ## Development Commands
 
@@ -20,52 +20,92 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Release bui
 xcodebuild -project ClipMon.xcodeproj -scheme ClipMon clean
 ```
 
-### Running Tests
+### Running the CLI Tool
 ```bash
-# Run unit tests
-xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -destination 'platform=macOS' test
+# Basic usage - start monitoring
+./ClipMon.app/Contents/MacOS/ClipMon
 
-# Run only unit tests (excluding UI tests)
-xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -destination 'platform=macOS' -only-testing:ClipMonTests test
+# Show help
+./ClipMon.app/Contents/MacOS/ClipMon --help
 
-# Run only UI tests
-xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -destination 'platform=macOS' -only-testing:ClipMonUITests test
+# Show version
+./ClipMon.app/Contents/MacOS/ClipMon --version
+
+# Use custom config file
+./ClipMon.app/Contents/MacOS/ClipMon --config /path/to/config.yaml
+
+# Stop the tool with Ctrl+C
+# ClipMon is monitoring clipboard changes. Press Ctrl+C to stop.
 ```
 
-### Running the Application
-The application should be run through Xcode for development, or built and run via:
+### Installing the CLI Tool
 ```bash
-# Build and run (for development, use Xcode IDE)
-xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
+# After building, create a symlink for easy access
+ln -sf "$PWD/ClipMon.app/Contents/MacOS/ClipMon" /usr/local/bin/clipmon
+
+# Or copy the binary directly
+cp "ClipMon.app/Contents/MacOS/ClipMon" /usr/local/bin/clipmon
 ```
 
 ## Code Architecture
 
 ### Project Structure
-- **ClipMon/**: Main application source code
-  - `ClipMonApp.swift`: Main app entry point as background application
-  - `ContentView.swift`: Contains `ClipboardMonitor` class with SQLite integration
-  - `Configuration.swift`: YAML configuration management and parsing
-  - `ClipMon.entitlements`: App sandbox entitlements for file access
-- **ClipMonTests/**: Unit tests using Swift Testing framework
-- **ClipMonUITests/**: UI tests using XCTest framework
+```
+ClipMon/
+├── .claude/                         # Claude Code configuration
+│   └── settings.local.json          # Permitted commands and restrictions
+├── .editorconfig                    # Code formatting configuration
+├── CLAUDE.md                        # This documentation file
+├── ClipMon.xcodeproj/               # Xcode project files
+└── ClipMon/                         # Main source code
+    ├── main.swift                   # CLI entry point with argument parsing
+    ├── ContentView.swift            # ClipboardMonitor class implementation
+    └── Configuration.swift          # YAML config management
+```
+
+**Source Files:**
+- **`main.swift`**: CLI entry point with command-line argument parsing and signal handling
+- **`ContentView.swift`**: Contains `ClipboardMonitor` class with SQLite integration (note: legacy filename from SwiftUI conversion)
+- **`Configuration.swift`**: YAML configuration management and parsing
 
 ### Key Technical Details
-- **Framework**: SwiftUI with macOS target, runs as background app without UI
+- **Framework**: Swift with macOS target, runs as command-line tool
 - **Database**: SQLite3 integration for clipboard history storage with rich metadata
 - **Monitoring**: NSPasteboard polling every 0.5 seconds for clipboard changes
 - **App Detection**: Uses NSWorkspace to identify source applications
 - **Language Detection**: NaturalLanguage framework for automatic language recognition
 - **Content Analysis**: Automatic classification of URLs, emails, and text types
 - **Logging**: Unified Logging System (os_log) with structured categories
-- **Security**: App runs in sandbox mode with file read/write permissions
+- **Security**: Command-line tool runs without sandbox restrictions for direct file system access
 - **Configuration**: YAML file parsing with tilde expansion for paths
+- **CLI Interface**: Professional command-line interface with help, version, and config options
 
-### App Entitlements
-The app is configured with:
-- App Sandbox enabled
-- Read-only and read-write access to user-selected files
-- Read-write access to Downloads folder
+### Product Type
+The project is configured as:
+- **Product Type**: Command-line tool (`com.apple.product-type.tool`)
+- **Deployment Target**: macOS 15.5+
+- **Architecture**: Universal (arm64 and x86_64 support)
+- **Dependencies**: Only native macOS frameworks (no external dependencies)
+
+### CLI Interface
+
+ClipMon provides a professional command-line interface with the following options:
+
+**Usage:** `clipmon [OPTIONS]`
+
+**Available Options:**
+- `-h, --help`: Show detailed usage information and examples
+- `-v, --version`: Display version information
+- `-c, --config PATH`: Specify custom configuration file path
+
+**Signal Handling:**
+- **SIGINT (Ctrl+C)**: Graceful shutdown with database cleanup
+- **SIGTERM**: Graceful shutdown for process management
+
+**Runtime Behavior:**
+- Continuous monitoring until interrupted
+- Automatic config directory and file creation
+- Clear console feedback for start/stop operations
 
 ### Database Schema
 ```sql
@@ -101,7 +141,7 @@ CREATE TABLE clipboard_entries (
 ## Configuration
 
 ### Config File Location
-The app reads configuration from `$HOME/.clipmon/config.yaml` (e.g., `/Users/username/.clipmon/config.yaml` on Linux, `/Users/username/.clipmon/config.yaml` on macOS). If the file doesn't exist, the app will create a sample configuration file with default settings.
+The CLI tool reads configuration from `$HOME/.clipmon/config.yaml` (e.g., `/Users/username/.clipmon/config.yaml` on macOS). If the file doesn't exist, the app will create a sample configuration file with default settings.
 
 ### Configuration Options
 ```yaml
@@ -145,12 +185,20 @@ EditorConfig is supported by:
 
 ## Development Notes
 
-- The app automatically creates the config directory and sample config file on first run
+### Current Project State
+- **No Test Suite**: The project currently has no test files (unit or UI tests)
+- **No Git Ignore**: Consider adding `.gitignore` for Xcode-generated files
+- **Self-Contained**: Uses only native macOS frameworks, no external dependencies
+- **Modern Xcode Project**: Uses File System Synchronized Root Group structure
+
+### Technical Implementation
+- The CLI tool automatically creates the config directory and sample config file on first run
 - Uses proper HOME environment variable detection for cross-platform compatibility
 - SQLite database location is configurable via YAML config file
 - Clipboard monitoring uses `NSPasteboard.changeCount` for efficient change detection
 - Rich metadata collection includes source app detection, content analysis, and language detection
-- App runs completely in background with no user interface
+- Command-line tool with proper signal handling (SIGINT/SIGTERM) for graceful shutdown
+- CLI options: --help, --version, --config for custom configuration files
 - Uses NaturalLanguage for language detection
 - Content type classification: url, email, short_text, long_text, date_containing, numeric_containing
 - Automatic word count, character count, and line count statistics
@@ -169,9 +217,12 @@ For each clipboard entry, the following metadata is automatically collected:
 
 ClipMon uses the Unified Logging System (os_log) for structured, performance-optimized logging across all app components.
 
+### Logging Subsystem
+**Subsystem**: `me.svshevtsov.ClipMon` (hardcoded, not using Bundle.main.bundleIdentifier)
+
 ### Logging Categories
 
-The app organizes logs into four main categories:
+The CLI tool organizes logs into four main categories:
 
 - **`clipboard`**: Clipboard monitoring events, change detection, content processing
 - **`database`**: SQLite operations, table creation, data insertion, errors
