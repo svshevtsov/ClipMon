@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(xcodebuild:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(swift build)",
+      "Bash(swift build:*)",
+      "Bash(grep:*)",
+      "Bash(./.build/debug/clipmon:*)"
     ],
     "deny": [],
     "ask": [],

@@ -5,11 +5,39 @@
 //  Created by Sergey Shevtsov on 20.08.2025.
 //
 
+import ArgumentParser
 import Foundation
 import AppKit
 import os.log
 
-// MARK: - Signal Handling
+struct ClipMon: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "clipmon",
+        abstract: "A macOS clipboard monitoring CLI tool",
+        discussion: """
+        ClipMon monitors clipboard changes and stores all clipboard text entries 
+        in a local SQLite database with rich metadata collection including source 
+        application detection, content analysis, and language detection.
+        
+        The tool runs continuously in the background until interrupted with Ctrl+C 
+        or SIGTERM. Configuration is read from ~/.clipmon/config.yaml, and the 
+        database is stored at ~/.clipmon/database.sqlite by default.
+        """,
+        version: "1.0.0"
+    )
+    
+    @Option(name: .shortAndLong, help: "Path to custom configuration file")
+    var config: String?
+    
+    @Flag(name: .shortAndLong, help: "Enable verbose logging output")
+    var verbose = false
+    
+    mutating func run() throws {
+        runClipMon(verbose: verbose, configPath: config)
+    }
+}
+
+// Global variables for signal handling
 var shouldTerminate = false
 var clipboardMonitor: ClipboardMonitor?
 var signalSources: [DispatchSourceSignal] = []
@@ -32,7 +60,7 @@ func setupSignalHandlers() {
             
             // Exit after a short delay to allow cleanup
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                exit(0)
+                Foundation.exit(0)
             }
         }
         source.resume()
@@ -44,72 +72,26 @@ func setupSignalHandlers() {
     signalSources.append(createSignalSource(for: SIGTERM))
 }
 
-// MARK: - Command Line Handling
-func printUsage() {
-    print("ClipMon - Clipboard Monitor CLI Tool")
-    print("")
-    print("USAGE:")
-    print("    clipmon [OPTIONS]")
-    print("")
-    print("OPTIONS:")
-    print("    -h, --help       Show this help message")
-    print("    -v, --version    Show version information")
-    print("    -c, --config     Specify custom config file path")
-    print("")
-    print("DESCRIPTION:")
-    print("    ClipMon monitors clipboard changes and stores all text entries")
-    print("    in a SQLite database. Configuration is read from ~/.clipmon/config.yaml")
-    print("")
-    print("EXAMPLES:")
-    print("    clipmon                                    # Start monitoring with default config")
-    print("    clipmon --config /path/to/config.yaml     # Use custom config file")
-    print("")
-}
-
-func printVersion() {
-    print("ClipMon v1.0.0")
-    print("A macOS clipboard monitoring CLI tool")
-}
-
-// MARK: - Main Entry Point
-let arguments = CommandLine.arguments
-
-// Handle command line arguments
-for i in 1..<arguments.count {
-    let arg = arguments[i]
-    switch arg {
-    case "-h", "--help":
-        printUsage()
-        exit(0)
-    case "-v", "--version":
-        printVersion()
-        exit(0)
-    case "-c", "--config":
-        if i + 1 < arguments.count {
-            // Custom config handling would go here
-            print("Custom config file: \(arguments[i + 1])")
-        } else {
-            print("Error: --config requires a file path")
-            exit(1)
-        }
-    default:
-        if arg.hasPrefix("-") {
-            print("Error: Unknown option '\(arg)'")
-            print("Use --help for usage information")
-            exit(1)
+func runClipMon(verbose: Bool, configPath: String?) {
+    os_log("ClipMon CLI starting...", log: .app, type: .info)
+    
+    if verbose {
+        print("Verbose mode enabled")
+        if let configPath = configPath {
+            print("Using custom config file: \(configPath)")
         }
     }
+    
+    setupSignalHandlers()
+    
+    // Initialize clipboard monitor
+    clipboardMonitor = ClipboardMonitor()
+    
+    os_log("ClipMon is now monitoring clipboard changes. Press Ctrl+C to stop.", log: .app, type: .info)
+    print("ClipMon is monitoring clipboard changes. Press Ctrl+C to stop.")
+    
+    // Keep the app running until termination signal
+    RunLoop.main.run()
 }
 
-os_log("ClipMon CLI starting...", log: .app, type: .info)
-
-setupSignalHandlers()
-
-// Initialize clipboard monitor
-clipboardMonitor = ClipboardMonitor()
-
-os_log("ClipMon is now monitoring clipboard changes. Press Ctrl+C to stop.", log: .app, type: .info)
-print("ClipMon is monitoring clipboard changes. Press Ctrl+C to stop.")
-
-// Keep the app running until termination signal
-RunLoop.main.run()
+ClipMon.main()
