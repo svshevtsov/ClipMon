@@ -12,7 +12,7 @@ struct ClipMonConfiguration {
     let databasePath: String
 
     static let `default` = ClipMonConfiguration(
-        databasePath: "~/.clipmon/database.sqlite"
+        databasePath: "\(ConfigurationManager.homeDirectory)/.clipmon/database.sqlite"
     )
 
     init(databasePath: String) {
@@ -21,26 +21,39 @@ struct ClipMonConfiguration {
 }
 
 class ConfigurationManager {
-    private static let configDirectory = "~/.clipmon"
-    private static let configFilePath = "~/.clipmon/config.yaml"
+    static var homeDirectory: String {
+        if let homeDir = ProcessInfo.processInfo.environment["HOME"] {
+            return homeDir
+        }
+        // Fallback to user's home directory
+        return NSHomeDirectory()
+    }
+
+    private static var configDirectory: String {
+        return "\(homeDirectory)/.clipmon"
+    }
+
+    private static var configFilePath: String {
+        return "\(homeDirectory)/.clipmon/config.yaml"
+    }
 
     static func loadConfiguration() -> ClipMonConfiguration {
-        let expandedConfigPath = NSString(string: configFilePath).expandingTildeInPath
-        let expandedConfigDir = NSString(string: configDirectory).expandingTildeInPath
+        let configPath = configFilePath
+        let configDir = configDirectory
 
         // Create config directory if it doesn't exist
-        createConfigDirectoryIfNeeded(at: expandedConfigDir)
+        createConfigDirectoryIfNeeded(at: configDir)
 
         // Check if config file exists
-        guard FileManager.default.fileExists(atPath: expandedConfigPath) else {
+        guard FileManager.default.fileExists(atPath: configPath) else {
             os_log("Config file not found, using default settings", log: .config, type: .info)
-            os_log("Expected config path: %{public}@", log: .config, type: .debug, expandedConfigPath)
+            os_log("Expected config path: %{public}@", log: .config, type: .debug, configPath)
             return .default
         }
 
         // Read and parse config file
         do {
-            let configContent = try String(contentsOfFile: expandedConfigPath, encoding: .utf8)
+            let configContent = try String(contentsOfFile: configPath, encoding: .utf8)
             os_log("Config file loaded successfully", log: .config, type: .info)
             return parseYAML(content: configContent)
         } catch {
@@ -84,8 +97,9 @@ class ConfigurationManager {
 
                 switch key {
                 case "database_path":
-                    config = ClipMonConfiguration(databasePath: cleanValue)
-                    os_log("Config: database_path set to %{public}@", log: .config, type: .debug, cleanValue)
+                    let expandedPath = expandPath(cleanValue)
+                    config = ClipMonConfiguration(databasePath: expandedPath)
+                    os_log("Config: database_path set to %{public}@", log: .config, type: .debug, expandedPath)
                 default:
                     os_log("Unknown config key: %{public}@", log: .config, type: .default, key)
                 }
@@ -96,30 +110,37 @@ class ConfigurationManager {
     }
 
     static func createSampleConfig() {
-        let expandedConfigDir = NSString(string: configDirectory).expandingTildeInPath
-        let expandedConfigPath = NSString(string: configFilePath).expandingTildeInPath
+        let configDir = configDirectory
+        let configPath = configFilePath
 
-        createConfigDirectoryIfNeeded(at: expandedConfigDir)
+        createConfigDirectoryIfNeeded(at: configDir)
 
         let sampleConfig = """
         # ClipMon Configuration File
         #
         # Database path - where clipboard history will be stored
-        # Use ~ for home directory expansion
+        # Use ~ for home directory expansion or absolute paths
         database_path: "~/.clipmon/database.sqlite"
 
         # You can also use absolute paths:
         # database_path: "/Users/username/Documents/clipboard.sqlite"
         """
 
-        if !FileManager.default.fileExists(atPath: expandedConfigPath) {
+        if !FileManager.default.fileExists(atPath: configPath) {
             do {
-                try sampleConfig.write(toFile: expandedConfigPath, atomically: true, encoding: .utf8)
+                try sampleConfig.write(toFile: configPath, atomically: true, encoding: .utf8)
                 os_log("Created sample config file", log: .config, type: .info)
-                os_log("Config file path: %{public}@", log: .config, type: .debug, expandedConfigPath)
+                os_log("Config file path: %{public}@", log: .config, type: .debug, configPath)
             } catch {
                 os_log("Failed to create sample config file: %{public}@", log: .config, type: .error, error.localizedDescription)
             }
         }
+    }
+
+    private static func expandPath(_ path: String) -> String {
+        if path.hasPrefix("~") {
+            return path.replacingOccurrences(of: "~", with: homeDirectory)
+        }
+        return path
     }
 }

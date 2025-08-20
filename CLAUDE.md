@@ -104,7 +104,7 @@ CREATE TABLE clipboard_entries (
 ## Configuration
 
 ### Config File Location
-The app reads configuration from `~/.clipmon/config.yaml`. If the file doesn't exist, the app will create a sample configuration file with default settings.
+The app reads configuration from `$HOME/.clipmon/config.yaml` (e.g., `/Users/username/.clipmon/config.yaml` on Linux, `/Users/username/.clipmon/config.yaml` on macOS). If the file doesn't exist, the app will create a sample configuration file with default settings.
 
 ### Configuration Options
 ```yaml
@@ -119,9 +119,9 @@ database_path: "~/.clipmon/database.sqlite"
 ```
 
 ### Default Settings
-- **Config Directory**: `~/.clipmon/`
-- **Database Path**: `~/.clipmon/database.sqlite`
-- **Config File**: `~/.clipmon/config.yaml`
+- **Config Directory**: `$HOME/.clipmon/` (e.g., `/Users/username/.clipmon/`)
+- **Database Path**: `$HOME/.clipmon/database.sqlite`
+- **Config File**: `$HOME/.clipmon/config.yaml`
 
 ## Code Style
 
@@ -149,6 +149,7 @@ EditorConfig is supported by:
 ## Development Notes
 
 - The app automatically creates the config directory and sample config file on first run
+- Uses proper HOME environment variable detection for cross-platform compatibility
 - SQLite database location is configurable via YAML config file
 - Clipboard monitoring uses `NSPasteboard.changeCount` for efficient change detection
 - Rich metadata collection includes source app detection, content analysis, and language detection

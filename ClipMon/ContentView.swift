@@ -55,8 +55,7 @@ class ClipboardMonitor: ObservableObject {
     }
 
     private func setupDatabase() {
-        let expandedPath = NSString(string: configuration.databasePath).expandingTildeInPath
-        let databaseURL = URL(fileURLWithPath: expandedPath)
+        let databaseURL = URL(fileURLWithPath: configuration.databasePath)
 
         // Create directory if it doesn't exist
         let databaseDir = databaseURL.deletingLastPathComponent()
