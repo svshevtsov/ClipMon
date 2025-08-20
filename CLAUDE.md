@@ -13,7 +13,7 @@ ClipMon is a configurable macOS background application that monitors clipboard c
 # Build the project for Debug configuration
 xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug build
 
-# Build the project for Release configuration  
+# Build the project for Release configuration
 xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Release build
 
 # Clean build folder
@@ -53,7 +53,7 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 ### Key Technical Details
 - **Framework**: SwiftUI with macOS target, runs as MenuBarExtra
 - **Database**: SQLite3 integration for clipboard history storage with rich metadata
-- **Monitoring**: NSPasteboard polling every 0.5 seconds for clipboard changes  
+- **Monitoring**: NSPasteboard polling every 0.5 seconds for clipboard changes
 - **App Detection**: Uses NSWorkspace to identify source applications
 - **Language Detection**: NaturalLanguage framework for automatic language recognition
 - **Content Analysis**: Automatic classification of URLs, emails, and text types
@@ -109,7 +109,7 @@ The app reads configuration from `~/.clipmon/config.yaml`. If the file doesn't e
 ### Configuration Options
 ```yaml
 # ClipMon Configuration File
-# 
+#
 # Database path - where clipboard history will be stored
 # Use ~ for home directory expansion
 database_path: "~/.clipmon/database.sqlite"
@@ -122,6 +122,29 @@ database_path: "~/.clipmon/database.sqlite"
 - **Config Directory**: `~/.clipmon/`
 - **Database Path**: `~/.clipmon/database.sqlite`
 - **Config File**: `~/.clipmon/config.yaml`
+
+## Code Style
+
+The project uses EditorConfig to maintain consistent formatting across different editors and IDEs.
+
+### EditorConfig Settings
+
+The `.editorconfig` file defines formatting rules for different file types:
+
+- **Swift files**: 4 spaces, UTF-8, LF line endings, 120 character line limit
+- **YAML files**: 2 spaces for consistent config file formatting
+- **Markdown files**: 2 spaces, preserve trailing whitespace for formatting
+- **JSON files**: 2 spaces for readability
+- **Xcode files**: Tab indentation (preserves Xcode's native format)
+
+### Editor Support
+
+EditorConfig is supported by:
+- **Xcode**: Via EditorConfig plugin or built-in support (Xcode 14+)
+- **VS Code**: Built-in support
+- **Vim/Neovim**: Via EditorConfig plugin
+- **Emacs**: Via EditorConfig package
+- **JetBrains IDEs**: Built-in support
 
 ## Development Notes
 
@@ -155,14 +178,14 @@ ClipMon uses the Unified Logging System (os_log) for structured, performance-opt
 The app organizes logs into four main categories:
 
 - **`clipboard`**: Clipboard monitoring events, change detection, content processing
-- **`database`**: SQLite operations, table creation, data insertion, errors  
+- **`database`**: SQLite operations, table creation, data insertion, errors
 - **`config`**: Configuration file loading, YAML parsing, directory creation
 - **`app`**: General application lifecycle events
 
 ### Log Levels
 
 - **`.info`**: Important operational events (startup, config loaded, entries saved)
-- **`.debug`**: Detailed diagnostic information (change counts, file paths, metadata)  
+- **`.debug`**: Detailed diagnostic information (change counts, file paths, metadata)
 - **`.error`**: Error conditions (database failures, file I/O errors)
 - **`.default`**: Standard informational messages
 

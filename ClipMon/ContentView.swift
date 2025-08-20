@@ -14,7 +14,7 @@ import os.log
 // MARK: - Logging Categories
 extension OSLog {
     private static var subsystem = Bundle.main.bundleIdentifier!
-    
+
     static let clipboard = OSLog(subsystem: subsystem, category: "clipboard")
     static let database = OSLog(subsystem: subsystem, category: "database")
     static let config = OSLog(subsystem: subsystem, category: "config")
@@ -41,23 +41,23 @@ class ClipboardMonitor: ObservableObject {
     private var lastChangeCount: Int = 0
     private var database: OpaquePointer?
     private let configuration: ClipMonConfiguration
-    
+
     init() {
         self.configuration = ConfigurationManager.loadConfiguration()
         ConfigurationManager.createSampleConfig()
         setupDatabase()
         startMonitoring()
     }
-    
+
     deinit {
         stopMonitoring()
         sqlite3_close(database)
     }
-    
+
     private func setupDatabase() {
         let expandedPath = NSString(string: configuration.databasePath).expandingTildeInPath
         let databaseURL = URL(fileURLWithPath: expandedPath)
-        
+
         // Create directory if it doesn't exist
         let databaseDir = databaseURL.deletingLastPathComponent()
         if !FileManager.default.fileExists(atPath: databaseDir.path) {
@@ -69,7 +69,7 @@ class ClipboardMonitor: ObservableObject {
                 os_log("Failed to create database directory: %{public}@", log: .database, type: .error, error.localizedDescription)
             }
         }
-        
+
         if sqlite3_open(databaseURL.path, &database) == SQLITE_OK {
             os_log("Database opened successfully", log: .database, type: .info)
             os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
@@ -79,7 +79,7 @@ class ClipboardMonitor: ObservableObject {
             os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
         }
     }
-    
+
     private func createTable() {
         let createTableSQL = """
             CREATE TABLE IF NOT EXISTS clipboard_entries (
@@ -98,7 +98,7 @@ class ClipboardMonitor: ObservableObject {
                 language_detected TEXT
             );
         """
-        
+
         if sqlite3_exec(database, createTableSQL, nil, nil, nil) != SQLITE_OK {
             os_log("Failed to create database table", log: .database, type: .error)
             if let errorMsg = sqlite3_errmsg(database) {
@@ -108,33 +108,33 @@ class ClipboardMonitor: ObservableObject {
             os_log("Database table created successfully", log: .database, type: .info)
         }
     }
-    
+
     private func startMonitoring() {
         let pasteboard = NSPasteboard.general
         lastChangeCount = pasteboard.changeCount
-        
+
         os_log("Starting clipboard monitoring", log: .clipboard, type: .info)
         os_log("Initial clipboard change count: %d", log: .clipboard, type: .debug, lastChangeCount)
-        
+
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.checkClipboard()
         }
     }
-    
+
     private func stopMonitoring() {
         os_log("Stopping clipboard monitoring", log: .clipboard, type: .info)
         timer?.invalidate()
         timer = nil
     }
-    
+
     private func checkClipboard() {
         let pasteboard = NSPasteboard.general
-        
+
         if pasteboard.changeCount != lastChangeCount {
             os_log("Clipboard change detected", log: .clipboard, type: .debug)
             os_log("Change count: %d -> %d", log: .clipboard, type: .debug, lastChangeCount, pasteboard.changeCount)
             lastChangeCount = pasteboard.changeCount
-            
+
             if let string = pasteboard.string(forType: .string), !string.isEmpty {
                 let entry = createClipboardEntry(from: string)
                 os_log("Processing clipboard entry", log: .clipboard, type: .info)
@@ -146,10 +146,10 @@ class ClipboardMonitor: ObservableObject {
             }
         }
     }
-    
+
     private func createClipboardEntry(from content: String) -> ClipboardEntry {
         let frontmostApp = NSWorkspace.shared.frontmostApplication
-        
+
         return ClipboardEntry(
             content: content,
             contentHash: content.sha256,
@@ -165,17 +165,17 @@ class ClipboardMonitor: ObservableObject {
             languageDetected: detectLanguage(in: content)
         )
     }
-    
+
     private func countWords(in text: String) -> Int {
         return text.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .count
     }
-    
+
     private func countLines(in text: String) -> Int {
         return text.components(separatedBy: .newlines).count
     }
-    
+
     private func determineContentType(_ content: String) -> String {
         if isValidURL(content) {
             return "url"
@@ -191,30 +191,30 @@ class ClipboardMonitor: ObservableObject {
             return "short_text"
         }
     }
-    
+
     private func isValidURL(_ string: String) -> Bool {
         let urlRegex = "^https?://[\\w\\-_]+(\\.[\\w\\-_]+)+([\\w\\-\\.,@?^=%&:/~\\+#]*[\\w\\-\\@?^=%&/~\\+#])?"
         return string.range(of: urlRegex, options: .regularExpression) != nil
     }
-    
+
     private func isValidEmail(_ string: String) -> Bool {
         let emailRegex = "^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$"
         return string.range(of: emailRegex, options: .regularExpression) != nil
     }
-    
+
     private func detectLanguage(in text: String) -> String? {
         guard text.count > 10 else { return nil }
-        
+
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
-        
+
         if let language = recognizer.dominantLanguage {
             return language.rawValue
         }
-        
+
         return nil
     }
-    
+
     private func saveClipboardEntry(_ entry: ClipboardEntry) {
         let insertSQL = """
             INSERT OR IGNORE INTO clipboard_entries (
@@ -223,9 +223,9 @@ class ClipboardMonitor: ObservableObject {
                 is_url, is_email, language_detected
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
-        
+
         var statement: OpaquePointer?
-        
+
         if sqlite3_prepare_v2(database, insertSQL, -1, &statement, nil) == SQLITE_OK {
             sqlite3_bind_text(statement, 1, entry.content, -1, nil)
             sqlite3_bind_text(statement, 2, entry.contentHash, -1, nil)
@@ -239,10 +239,10 @@ class ClipboardMonitor: ObservableObject {
             sqlite3_bind_int(statement, 10, entry.isURL ? 1 : 0)
             sqlite3_bind_int(statement, 11, entry.isEmail ? 1 : 0)
             sqlite3_bind_text(statement, 12, entry.languageDetected, -1, nil)
-            
+
             if sqlite3_step(statement) == SQLITE_DONE {
                 os_log("Clipboard entry saved to database", log: .database, type: .info)
-                os_log("Entry metadata - App: %{public}@, Type: %{public}@, Chars: %d, Words: %d", 
+                os_log("Entry metadata - App: %{public}@, Type: %{public}@, Chars: %d, Words: %d",
                       log: .database, type: .debug,
                       entry.appName ?? "Unknown",
                       entry.contentType,
@@ -255,7 +255,7 @@ class ClipboardMonitor: ObservableObject {
                 }
             }
         }
-        
+
         sqlite3_finalize(statement)
     }
 }
@@ -264,11 +264,11 @@ extension String {
     var sha256: String {
         let data = Data(utf8)
         var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        
+
         data.withUnsafeBytes {
             _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &digest)
         }
-        
+
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

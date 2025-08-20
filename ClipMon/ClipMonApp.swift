@@ -10,7 +10,6 @@ import SwiftUI
 @main
 struct ClipMonApp: App {
     @StateObject private var clipboardMonitor = ClipboardMonitor()
-    
     var body: some Scene {
         MenuBarExtra("ClipMon", systemImage: "doc.on.clipboard") {
             Button("Quit") {
