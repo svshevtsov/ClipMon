@@ -74,7 +74,7 @@ CREATE TABLE clipboard_entries (
     content TEXT NOT NULL,
     app_name TEXT,
     app_bundle_id TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    timestamp INTEGER,
     character_count INTEGER,
     word_count INTEGER,
     line_count INTEGER,
@@ -89,7 +89,7 @@ CREATE TABLE clipboard_entries (
 - `content`: The actual clipboard text content
 - `app_name`: Display name of the source application
 - `app_bundle_id`: Bundle identifier of the source application
-- `timestamp`: ISO8601 formatted timestamp of when content was copied
+- `timestamp`: Unix timestamp (seconds since epoch) of when content was copied
 - `character_count`: Number of characters in the content
 - `word_count`: Number of words in the content
 - `line_count`: Number of lines in the content
@@ -160,7 +160,7 @@ EditorConfig is supported by:
 
 For each clipboard entry, the following metadata is automatically collected:
 - **Source Application**: Name and bundle identifier of the app that generated the clipboard content
-- **Timestamps**: Precise ISO8601 formatted timestamps
+- **Timestamps**: Precise unix timestamps (seconds since epoch)
 - **Content Statistics**: Character count, word count, line count
 - **Content Classification**: Automatic detection of URLs, emails, and content types
 - **Language Detection**: Uses Apple's NaturalLanguage framework for text longer than 10 characters

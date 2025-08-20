@@ -85,7 +85,7 @@ class ClipboardMonitor: ObservableObject {
                 content TEXT NOT NULL,
                 app_name TEXT,
                 app_bundle_id TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                timestamp INTEGER,
                 character_count INTEGER,
                 word_count INTEGER,
                 line_count INTEGER,
@@ -238,8 +238,8 @@ class ClipboardMonitor: ObservableObject {
                 sqlite3_bind_null(statement, 3)
             }
             
-            let timestampString = ISO8601DateFormatter().string(from: entry.timestamp)
-            sqlite3_bind_text(statement, 4, (timestampString as NSString).utf8String, -1, nil)
+            let unixTimestamp = Int64(entry.timestamp.timeIntervalSince1970)
+            sqlite3_bind_int64(statement, 4, unixTimestamp)
             sqlite3_bind_int(statement, 5, Int32(entry.characterCount))
             sqlite3_bind_int(statement, 6, Int32(entry.wordCount))
             sqlite3_bind_int(statement, 7, Int32(entry.lineCount))
