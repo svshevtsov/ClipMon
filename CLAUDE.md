@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ClipMon is a configurable macOS background application that monitors clipboard changes and stores all clipboard text entries in a local SQLite database. The app runs as a menu bar extra with minimal UI, continuously monitoring the system clipboard for text changes and automatically saving them with timestamps and deduplication. Configuration is handled via YAML files with sensible defaults.
+ClipMon is a configurable macOS background application that monitors clipboard changes and stores all clipboard text entries in a local SQLite database. The app runs completely in the background without any UI, continuously monitoring the system clipboard for text changes and automatically saving them with timestamps. Configuration is handled via YAML files with sensible defaults.
 
 ## Development Commands
 
@@ -43,7 +43,7 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 
 ### Project Structure
 - **ClipMon/**: Main application source code
-  - `ClipMonApp.swift`: Main app entry point with MenuBarExtra configuration
+  - `ClipMonApp.swift`: Main app entry point as background application
   - `ContentView.swift`: Contains `ClipboardMonitor` class with SQLite integration
   - `Configuration.swift`: YAML configuration management and parsing
   - `ClipMon.entitlements`: App sandbox entitlements for file access
@@ -51,7 +51,7 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 - **ClipMonUITests/**: UI tests using XCTest framework
 
 ### Key Technical Details
-- **Framework**: SwiftUI with macOS target, runs as MenuBarExtra
+- **Framework**: SwiftUI with macOS target, runs as background app without UI
 - **Database**: SQLite3 integration for clipboard history storage with rich metadata
 - **Monitoring**: NSPasteboard polling every 0.5 seconds for clipboard changes
 - **App Detection**: Uses NSWorkspace to identify source applications
@@ -150,7 +150,7 @@ EditorConfig is supported by:
 - SQLite database location is configurable via YAML config file
 - Clipboard monitoring uses `NSPasteboard.changeCount` for efficient change detection
 - Rich metadata collection includes source app detection, content analysis, and language detection
-- Menu bar icon provides basic quit functionality
+- App runs completely in background with no user interface
 - Uses NaturalLanguage for language detection
 - Content type classification: url, email, short_text, long_text, date_containing, numeric_containing
 - Automatic word count, character count, and line count statistics
