@@ -9,6 +9,17 @@ import Foundation
 import AppKit
 import SQLite3
 import NaturalLanguage
+import os.log
+
+// MARK: - Logging Categories
+extension OSLog {
+    private static var subsystem = Bundle.main.bundleIdentifier!
+    
+    static let clipboard = OSLog(subsystem: subsystem, category: "clipboard")
+    static let database = OSLog(subsystem: subsystem, category: "database")
+    static let config = OSLog(subsystem: subsystem, category: "config")
+    static let app = OSLog(subsystem: subsystem, category: "app")
+}
 
 struct ClipboardEntry {
     let content: String
@@ -52,17 +63,20 @@ class ClipboardMonitor: ObservableObject {
         if !FileManager.default.fileExists(atPath: databaseDir.path) {
             do {
                 try FileManager.default.createDirectory(at: databaseDir, withIntermediateDirectories: true, attributes: nil)
-                print("Created database directory: \(databaseDir.path)")
+                os_log("Created database directory", log: .database, type: .info)
+                os_log("Directory path: %{public}@", log: .database, type: .debug, databaseDir.path)
             } catch {
-                print("Failed to create database directory: \(error)")
+                os_log("Failed to create database directory: %{public}@", log: .database, type: .error, error.localizedDescription)
             }
         }
         
         if sqlite3_open(databaseURL.path, &database) == SQLITE_OK {
-            print("Database opened at: \(databaseURL.path)")
+            os_log("Database opened successfully", log: .database, type: .info)
+            os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
             createTable()
         } else {
-            print("Unable to open database at: \(databaseURL.path)")
+            os_log("Failed to open database", log: .database, type: .error)
+            os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
         }
     }
     
@@ -86,7 +100,12 @@ class ClipboardMonitor: ObservableObject {
         """
         
         if sqlite3_exec(database, createTableSQL, nil, nil, nil) != SQLITE_OK {
-            print("Error creating table")
+            os_log("Failed to create database table", log: .database, type: .error)
+            if let errorMsg = sqlite3_errmsg(database) {
+                os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsg)
+            }
+        } else {
+            os_log("Database table created successfully", log: .database, type: .info)
         }
     }
     
@@ -94,12 +113,16 @@ class ClipboardMonitor: ObservableObject {
         let pasteboard = NSPasteboard.general
         lastChangeCount = pasteboard.changeCount
         
+        os_log("Starting clipboard monitoring", log: .clipboard, type: .info)
+        os_log("Initial clipboard change count: %d", log: .clipboard, type: .debug, lastChangeCount)
+        
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.checkClipboard()
         }
     }
     
     private func stopMonitoring() {
+        os_log("Stopping clipboard monitoring", log: .clipboard, type: .info)
         timer?.invalidate()
         timer = nil
     }
@@ -108,11 +131,18 @@ class ClipboardMonitor: ObservableObject {
         let pasteboard = NSPasteboard.general
         
         if pasteboard.changeCount != lastChangeCount {
+            os_log("Clipboard change detected", log: .clipboard, type: .debug)
+            os_log("Change count: %d -> %d", log: .clipboard, type: .debug, lastChangeCount, pasteboard.changeCount)
             lastChangeCount = pasteboard.changeCount
             
             if let string = pasteboard.string(forType: .string), !string.isEmpty {
                 let entry = createClipboardEntry(from: string)
+                os_log("Processing clipboard entry", log: .clipboard, type: .info)
+                os_log("Content preview: %{private}@", log: .clipboard, type: .debug, String(entry.content.prefix(50)))
+                os_log("Source app: %{public}@", log: .clipboard, type: .info, entry.appName ?? "Unknown")
                 saveClipboardEntry(entry)
+            } else {
+                os_log("Clipboard change detected but no string content found", log: .clipboard, type: .debug)
             }
         }
     }
@@ -211,9 +241,18 @@ class ClipboardMonitor: ObservableObject {
             sqlite3_bind_text(statement, 12, entry.languageDetected, -1, nil)
             
             if sqlite3_step(statement) == SQLITE_DONE {
-                print("Clipboard entry saved: \(entry.content.prefix(50))... [App: \(entry.appName ?? "Unknown"), Type: \(entry.contentType)]")
+                os_log("Clipboard entry saved to database", log: .database, type: .info)
+                os_log("Entry metadata - App: %{public}@, Type: %{public}@, Chars: %d, Words: %d", 
+                      log: .database, type: .debug,
+                      entry.appName ?? "Unknown",
+                      entry.contentType,
+                      entry.characterCount,
+                      entry.wordCount)
             } else {
-                print("Error inserting clipboard entry")
+                os_log("Failed to insert clipboard entry into database", log: .database, type: .error)
+                if let errorMsg = sqlite3_errmsg(database) {
+                    os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsg)
+                }
             }
         }
         

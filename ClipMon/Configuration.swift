@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os.log
 
 struct ClipMonConfiguration {
     let databasePath: String
@@ -32,16 +33,18 @@ class ConfigurationManager {
         
         // Check if config file exists
         guard FileManager.default.fileExists(atPath: expandedConfigPath) else {
-            print("Config file not found, using defaults")
+            os_log("Config file not found, using default settings", log: .config, type: .info)
+            os_log("Expected config path: %{public}@", log: .config, type: .debug, expandedConfigPath)
             return .default
         }
         
         // Read and parse config file
         do {
             let configContent = try String(contentsOfFile: expandedConfigPath, encoding: .utf8)
+            os_log("Config file loaded successfully", log: .config, type: .info)
             return parseYAML(content: configContent)
         } catch {
-            print("Error reading config file: \(error), using defaults")
+            os_log("Error reading config file, using defaults: %{public}@", log: .config, type: .error, error.localizedDescription)
             return .default
         }
     }
@@ -50,9 +53,10 @@ class ConfigurationManager {
         if !FileManager.default.fileExists(atPath: path) {
             do {
                 try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
-                print("Created config directory at: \(path)")
+                os_log("Created config directory", log: .config, type: .info)
+                os_log("Directory path: %{public}@", log: .config, type: .debug, path)
             } catch {
-                print("Failed to create config directory: \(error)")
+                os_log("Failed to create config directory: %{public}@", log: .config, type: .error, error.localizedDescription)
             }
         }
     }
@@ -81,8 +85,9 @@ class ConfigurationManager {
                 switch key {
                 case "database_path":
                     config = ClipMonConfiguration(databasePath: cleanValue)
+                    os_log("Config: database_path set to %{public}@", log: .config, type: .debug, cleanValue)
                 default:
-                    print("Unknown config key: \(key)")
+                    os_log("Unknown config key: %{public}@", log: .config, type: .default, key)
                 }
             }
         }
@@ -110,9 +115,10 @@ class ConfigurationManager {
         if !FileManager.default.fileExists(atPath: expandedConfigPath) {
             do {
                 try sampleConfig.write(toFile: expandedConfigPath, atomically: true, encoding: .utf8)
-                print("Created sample config file at: \(expandedConfigPath)")
+                os_log("Created sample config file", log: .config, type: .info)
+                os_log("Config file path: %{public}@", log: .config, type: .debug, expandedConfigPath)
             } catch {
-                print("Failed to create sample config file: \(error)")
+                os_log("Failed to create sample config file: %{public}@", log: .config, type: .error, error.localizedDescription)
             }
         }
     }

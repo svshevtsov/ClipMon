@@ -57,6 +57,7 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 - **App Detection**: Uses NSWorkspace to identify source applications
 - **Language Detection**: NaturalLanguage framework for automatic language recognition
 - **Content Analysis**: Automatic classification of URLs, emails, and text types
+- **Logging**: Unified Logging System (os_log) with structured categories
 - **Security**: App runs in sandbox mode with file read/write permissions
 - **Deduplication**: Uses SHA-256 hashing to prevent duplicate entries
 - **Configuration**: YAML file parsing with tilde expansion for paths
@@ -144,3 +145,44 @@ For each clipboard entry, the following metadata is automatically collected:
 - **Content Classification**: Automatic detection of URLs, emails, and content types
 - **Language Detection**: Uses Apple's NaturalLanguage framework for text longer than 10 characters
 - **Deduplication**: SHA-256 hash prevents storing identical content multiple times
+
+## Logging System
+
+ClipMon uses the Unified Logging System (os_log) for structured, performance-optimized logging across all app components.
+
+### Logging Categories
+
+The app organizes logs into four main categories:
+
+- **`clipboard`**: Clipboard monitoring events, change detection, content processing
+- **`database`**: SQLite operations, table creation, data insertion, errors  
+- **`config`**: Configuration file loading, YAML parsing, directory creation
+- **`app`**: General application lifecycle events
+
+### Log Levels
+
+- **`.info`**: Important operational events (startup, config loaded, entries saved)
+- **`.debug`**: Detailed diagnostic information (change counts, file paths, metadata)  
+- **`.error`**: Error conditions (database failures, file I/O errors)
+- **`.default`**: Standard informational messages
+
+### Privacy Considerations
+
+- **Public data**: App names, bundle IDs, content types, error messages
+- **Private data**: Clipboard content (only first 50 chars in debug logs), file paths
+- Uses `%{public}@` and `%{private}@` formatters for proper privacy handling
+
+### Viewing Logs
+
+Use Console.app or command line tools to view ClipMon logs:
+
+```bash
+# View all ClipMon logs
+log show --predicate 'subsystem == "me.svshevtsov.ClipMon"' --last 1h
+
+# View specific category
+log show --predicate 'subsystem == "me.svshevtsov.ClipMon" AND category == "clipboard"' --last 1h
+
+# Stream live logs
+log stream --predicate 'subsystem == "me.svshevtsov.ClipMon"'
+```
