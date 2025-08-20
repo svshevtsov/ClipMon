@@ -224,17 +224,34 @@ class ClipboardMonitor: ObservableObject {
         var statement: OpaquePointer?
 
         if sqlite3_prepare_v2(database, insertSQL, -1, &statement, nil) == SQLITE_OK {
-            sqlite3_bind_text(statement, 1, entry.content, -1, nil)
-            sqlite3_bind_text(statement, 2, entry.appName, -1, nil)
-            sqlite3_bind_text(statement, 3, entry.appBundleId, -1, nil)
-            sqlite3_bind_text(statement, 4, ISO8601DateFormatter().string(from: entry.timestamp), -1, nil)
+            sqlite3_bind_text(statement, 1, (entry.content as NSString).utf8String, -1, nil)
+            
+            if let appName = entry.appName {
+                sqlite3_bind_text(statement, 2, (appName as NSString).utf8String, -1, nil)
+            } else {
+                sqlite3_bind_null(statement, 2)
+            }
+            
+            if let appBundleId = entry.appBundleId {
+                sqlite3_bind_text(statement, 3, (appBundleId as NSString).utf8String, -1, nil)
+            } else {
+                sqlite3_bind_null(statement, 3)
+            }
+            
+            let timestampString = ISO8601DateFormatter().string(from: entry.timestamp)
+            sqlite3_bind_text(statement, 4, (timestampString as NSString).utf8String, -1, nil)
             sqlite3_bind_int(statement, 5, Int32(entry.characterCount))
             sqlite3_bind_int(statement, 6, Int32(entry.wordCount))
             sqlite3_bind_int(statement, 7, Int32(entry.lineCount))
-            sqlite3_bind_text(statement, 8, entry.contentType, -1, nil)
+            sqlite3_bind_text(statement, 8, (entry.contentType as NSString).utf8String, -1, nil)
             sqlite3_bind_int(statement, 9, entry.isURL ? 1 : 0)
             sqlite3_bind_int(statement, 10, entry.isEmail ? 1 : 0)
-            sqlite3_bind_text(statement, 11, entry.languageDetected, -1, nil)
+            
+            if let languageDetected = entry.languageDetected {
+                sqlite3_bind_text(statement, 11, (languageDetected as NSString).utf8String, -1, nil)
+            } else {
+                sqlite3_bind_null(statement, 11)
+            }
 
             if sqlite3_step(statement) == SQLITE_DONE {
                 os_log("Clipboard entry saved to database", log: .database, type: .info)
