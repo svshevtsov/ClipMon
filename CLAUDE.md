@@ -52,8 +52,11 @@ xcodebuild -project ClipMon.xcodeproj -scheme ClipMon -configuration Debug
 
 ### Key Technical Details
 - **Framework**: SwiftUI with macOS target, runs as MenuBarExtra
-- **Database**: SQLite3 integration for clipboard history storage
+- **Database**: SQLite3 integration for clipboard history storage with rich metadata
 - **Monitoring**: NSPasteboard polling every 0.5 seconds for clipboard changes  
+- **App Detection**: Uses NSWorkspace to identify source applications
+- **Language Detection**: NaturalLanguage framework for automatic language recognition
+- **Content Analysis**: Automatic classification of URLs, emails, and text types
 - **Security**: App runs in sandbox mode with file read/write permissions
 - **Deduplication**: Uses SHA-256 hashing to prevent duplicate entries
 - **Configuration**: YAML file parsing with tilde expansion for paths
@@ -69,10 +72,33 @@ The app is configured with:
 CREATE TABLE clipboard_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     content TEXT NOT NULL,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,  
-    content_hash TEXT UNIQUE
+    content_hash TEXT UNIQUE,
+    app_name TEXT,
+    app_bundle_id TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    character_count INTEGER,
+    word_count INTEGER,
+    line_count INTEGER,
+    content_type TEXT,
+    is_url INTEGER DEFAULT 0,
+    is_email INTEGER DEFAULT 0,
+    language_detected TEXT
 );
 ```
+
+**Field Descriptions:**
+- `content`: The actual clipboard text content
+- `content_hash`: SHA-256 hash for deduplication
+- `app_name`: Display name of the source application
+- `app_bundle_id`: Bundle identifier of the source application
+- `timestamp`: ISO8601 formatted timestamp of when content was copied
+- `character_count`: Number of characters in the content
+- `word_count`: Number of words in the content
+- `line_count`: Number of lines in the content
+- `content_type`: Classified type (url, email, short_text, long_text, etc.)
+- `is_url`: Boolean flag if content is a valid URL
+- `is_email`: Boolean flag if content is a valid email address
+- `language_detected`: Auto-detected language using NaturalLanguage framework
 
 ## Configuration
 
@@ -101,7 +127,20 @@ database_path: "~/.clipmon/database.sqlite"
 - The app automatically creates the config directory and sample config file on first run
 - SQLite database location is configurable via YAML config file
 - Clipboard monitoring uses `NSPasteboard.changeCount` for efficient change detection
+- Rich metadata collection includes source app detection, content analysis, and language detection
 - Menu bar icon provides basic quit functionality
 - SHA-256 content hashing prevents duplicate clipboard entries from being stored
-- Uses CommonCrypto for hash generation
+- Uses CommonCrypto for hash generation and NaturalLanguage for language detection
+- Content type classification: url, email, short_text, long_text, date_containing, numeric_containing
+- Automatic word count, character count, and line count statistics
 - Supports tilde (`~`) expansion in file paths
+
+## Metadata Collected
+
+For each clipboard entry, the following metadata is automatically collected:
+- **Source Application**: Name and bundle identifier of the app that generated the clipboard content
+- **Timestamps**: Precise ISO8601 formatted timestamps
+- **Content Statistics**: Character count, word count, line count
+- **Content Classification**: Automatic detection of URLs, emails, and content types
+- **Language Detection**: Uses Apple's NaturalLanguage framework for text longer than 10 characters
+- **Deduplication**: SHA-256 hash prevents storing identical content multiple times
