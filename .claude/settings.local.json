@@ -6,7 +6,10 @@
       "Bash(swift build)",
       "Bash(swift build:*)",
       "Bash(grep:*)",
-      "Bash(./.build/debug/clipmon:*)"
+      "Bash(./.build/debug/clipmon:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(/Users/svshevtsov/Library/Developer/Xcode/DerivedData/ClipMon-gvoiebwcaummlydhtlugcpidobuz/Build/Products/Debug/ClipMon --help)"
     ],
     "deny": [],
     "ask": [],

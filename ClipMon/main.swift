@@ -37,39 +37,41 @@ struct ClipMon: ParsableCommand {
     }
 }
 
-// Global variables for signal handling
-var shouldTerminate = false
-var clipboardMonitor: ClipboardMonitor?
-var signalSources: [DispatchSourceSignal] = []
-
-func setupSignalHandlers() {
-    let signalQueue = DispatchQueue(label: "signal.handler")
+// Modern async signal handling
+actor AsyncSignalHandler {
+    private var signalSources: [DispatchSourceSignal] = []
+    private var onSignalReceived: (() async -> Void)?
     
-    func createSignalSource(for signal: Int32) -> DispatchSourceSignal {
-        // Ignore the signal to prevent default behavior
-        Darwin.signal(signal, SIG_IGN)
-        
-        let source = DispatchSource.makeSignalSource(signal: signal, queue: signalQueue)
-        source.setEventHandler {
-            let signalName = signal == SIGINT ? "SIGINT" : "SIGTERM"
-            print("\nReceived \(signalName), shutting down gracefully...")
-            os_log("Received %{public}@, shutting down gracefully...", log: .app, type: .info, signalName)
-            
-            clipboardMonitor?.stop()
-            shouldTerminate = true
-            
-            // Exit after a short delay to allow cleanup
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                Foundation.exit(0)
-            }
-        }
-        source.resume()
-        return source
+    func setSignalHandler(_ handler: @escaping () async -> Void) {
+        onSignalReceived = handler
     }
     
-    // Set up handlers for SIGINT (Ctrl+C) and SIGTERM
-    signalSources.append(createSignalSource(for: SIGINT))
-    signalSources.append(createSignalSource(for: SIGTERM))
+    func startListening(for signals: [Int32] = [SIGINT, SIGTERM]) {
+        let signalQueue = DispatchQueue(label: "signal.handler")
+        
+        for signal in signals {
+            // Ignore the signal to prevent default behavior
+            Darwin.signal(signal, SIG_IGN)
+            
+            let source = DispatchSource.makeSignalSource(signal: signal, queue: signalQueue)
+            source.setEventHandler { [weak self] in
+                let signalName = signal == SIGINT ? "SIGINT" : "SIGTERM"
+                print("\nReceived \(signalName), shutting down gracefully...")
+                os_log("Received %{public}@, shutting down gracefully...", log: .app, type: .info, signalName)
+                
+                Task {
+                    await self?.onSignalReceived?()
+                }
+            }
+            source.resume()
+            signalSources.append(source)
+        }
+    }
+    
+    func stopListening() {
+        signalSources.forEach { $0.cancel() }
+        signalSources.removeAll()
+    }
 }
 
 func runClipMon(verbose: Bool, configPath: String?) {
@@ -82,10 +84,21 @@ func runClipMon(verbose: Bool, configPath: String?) {
         }
     }
     
-    setupSignalHandlers()
-    
     // Initialize clipboard monitor
-    clipboardMonitor = ClipboardMonitor()
+    let clipboardMonitor = ClipboardMonitor()
+    
+    // Set up modern async signal handling
+    let signalHandler = AsyncSignalHandler()
+    
+    Task {
+        await signalHandler.setSignalHandler {
+            clipboardMonitor.stop()
+            // Small delay to allow cleanup
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            Foundation.exit(0)
+        }
+        await signalHandler.startListening()
+    }
     
     os_log("ClipMon is now monitoring clipboard changes. Press Ctrl+C to stop.", log: .app, type: .info)
     print("ClipMon is monitoring clipboard changes. Press Ctrl+C to stop.")
