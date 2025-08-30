@@ -77,10 +77,35 @@ class ClipboardMonitor {
         if sqlite3_open(databaseURL.path, &database) == SQLITE_OK {
             os_log("Database opened successfully", log: .database, type: .info)
             os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
+            configureSQLiteSettings()
             createTable()
         } else {
             os_log("Failed to open database", log: .database, type: .error)
             os_log("Database path: %{public}@", log: .database, type: .debug, databaseURL.path)
+        }
+    }
+
+    private func configureSQLiteSettings() {
+        // Enable WAL mode for better concurrency and crash resilience
+        var result = sqlite3_exec(database, "PRAGMA journal_mode = WAL;", nil, nil, nil)
+        if result == SQLITE_OK {
+            os_log("WAL mode enabled successfully", log: .database, type: .info)
+        } else {
+            os_log("Failed to enable WAL mode", log: .database, type: .error)
+            if let errorMsg = sqlite3_errmsg(database) {
+                os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsg)
+            }
+        }
+        
+        // Enable full fsync for maximum durability
+        result = sqlite3_exec(database, "PRAGMA fullfsync = ON;", nil, nil, nil)
+        if result == SQLITE_OK {
+            os_log("Full fsync enabled successfully", log: .database, type: .info)
+        } else {
+            os_log("Failed to enable full fsync", log: .database, type: .error)
+            if let errorMsg = sqlite3_errmsg(database) {
+                os_log("SQLite error: %{public}s", log: .database, type: .error, errorMsg)
+            }
         }
     }
 
